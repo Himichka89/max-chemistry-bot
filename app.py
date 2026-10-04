@@ -138,6 +138,61 @@ GRADE8_TOPICS = {
     ),
 }
 
+
+OXIDATION_QUIZ = {
+    "ox_q1": {
+        "text": "🎯 Вопрос 1 из 5\n\nОпредели степень окисления серы в H₂SO₄:",
+        "buttons": [("+2", "ox_q1_bad"), ("+4", "ox_q1_bad"), ("+6", "ox_q1_ok"), ("−2", "ox_q1_bad")],
+    },
+    "ox_q2": {
+        "text": "🎯 Вопрос 2 из 5\n\nОпредели степень окисления азота в HNO₃:",
+        "buttons": [("+3", "ox_q2_bad"), ("+5", "ox_q2_ok"), ("−3", "ox_q2_bad"), ("+1", "ox_q2_bad")],
+    },
+    "ox_q3": {
+        "text": "🎯 Вопрос 3 из 5\n\nКакова степень окисления кислорода в H₂O?",
+        "buttons": [("0", "ox_q3_bad"), ("−1", "ox_q3_bad"), ("−2", "ox_q3_ok"), ("+2", "ox_q3_bad")],
+    },
+    "ox_q4": {
+        "text": "🎯 Вопрос 4 из 5\n\nОпредели степень окисления марганца в KMnO₄:",
+        "buttons": [("+2", "ox_q4_bad"), ("+4", "ox_q4_bad"), ("+6", "ox_q4_bad"), ("+7", "ox_q4_ok")],
+    },
+    "ox_q5": {
+        "text": "🎯 Вопрос 5 из 5\n\nКакова степень окисления хлора в простом веществе Cl₂?",
+        "buttons": [("−1", "ox_q5_bad"), ("0", "ox_q5_ok"), ("+1", "ox_q5_bad"), ("+2", "ox_q5_bad")],
+    },
+}
+
+OXIDATION_FEEDBACK = {
+    "ox_q1": ("2·(+1) + x + 4·(−2) = 0 → x = +6.", "ox_q2"),
+    "ox_q2": ("(+1) + x + 3·(−2) = 0 → x = +5.", "ox_q3"),
+    "ox_q3": ("В большинстве соединений кислород имеет степень окисления −2.", "ox_q4"),
+    "ox_q4": ("(+1) + x + 4·(−2) = 0 → x = +7.", "ox_q5"),
+    "ox_q5": ("В простом веществе степень окисления любого элемента равна 0.", None),
+}
+
+def quiz_buttons(question_key):
+    items = OXIDATION_QUIZ[question_key]["buttons"]
+    return [
+        [cb(items[0][0], items[0][1]), cb(items[1][0], items[1][1])],
+        [cb(items[2][0], items[2][1]), cb(items[3][0], items[3][1])],
+        [cb("📖 К теме", "g8_oxidation")],
+    ]
+
+def oxidation_feedback(payload):
+    # payload example: ox_q1_ok / ox_q1_bad
+    question_key = payload.rsplit("_", 1)[0]
+    is_correct = payload.endswith("_ok")
+    explanation, next_key = OXIDATION_FEEDBACK[question_key]
+    if is_correct:
+        text = f"✅ Верно!\n\n{explanation}"
+        if next_key:
+            return text + "\n\nПереходим к следующему вопросу 👇", [[cb("➡️ Следующий вопрос", next_key)]]
+        return text + "\n\n🏆 Отлично! Тренировка завершена.", [
+            [cb("🔄 Пройти ещё раз", "ox_q1")],
+            [cb("📖 К теме", "g8_oxidation"), cb("🧪 К темам 8 класса", "grade_8")],
+        ]
+    return "❌ Пока неверно.\n\nПодсказка: сумма степеней окисления всех атомов в нейтральном веществе равна 0.\nПопробуй ещё раз 👇", quiz_buttons(question_key)
+
 def grade8_topic_buttons():
     return [
         [cb("📖 К темам 8 класса", "grade_8")],
@@ -228,6 +283,26 @@ def webhook():
                     answer_callback(callback_id, WELCOME, MAIN_BUTTONS)
                 elif payload == "grade_8":
                     answer_callback(callback_id, GRADE8_TEXT, GRADE8_BUTTONS)
+                elif payload == "g8_oxidation":
+                    title, description = GRADE8_TOPICS[payload]
+                    answer_callback(
+                        callback_id,
+                        f"{title}\n\n{description}\n\nНажми кнопку ниже и проверь себя:",
+                        [
+                            [cb("🎯 Начать мини-тест", "ox_q1")],
+                            [cb("📖 К темам 8 класса", "grade_8")],
+                            [cb("⬅️ Главное меню", "menu")],
+                        ]
+                    )
+                elif payload in OXIDATION_QUIZ:
+                    answer_callback(
+                        callback_id,
+                        OXIDATION_QUIZ[payload]["text"],
+                        quiz_buttons(payload)
+                    )
+                elif payload.startswith("ox_q") and (payload.endswith("_ok") or payload.endswith("_bad")):
+                    text, buttons = oxidation_feedback(payload)
+                    answer_callback(callback_id, text, buttons)
                 elif payload in GRADE8_TOPICS:
                     title, description = GRADE8_TOPICS[payload]
                     answer_callback(
